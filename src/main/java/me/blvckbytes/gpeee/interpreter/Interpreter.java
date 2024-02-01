@@ -77,10 +77,9 @@ public class Interpreter {
 
     //////////////////////// Entry Point ////////////////////////
 
-    if (expression instanceof ProgramExpression) {
-      ProgramExpression program = (ProgramExpression) expression;
+    if (expression instanceof final ProgramExpression program) {
 
-      Object lastValue = null;
+			Object lastValue = null;
       for (int i = 0; i < program.getLines().size(); i++) {
         int programLine = i;
         AExpression line = program.getLines().get(programLine);
@@ -123,9 +122,8 @@ public class Interpreter {
 
     ///////////////////////// Functions /////////////////////////
 
-    if (expression instanceof FunctionInvocationExpression) {
-      FunctionInvocationExpression functionExpression = (FunctionInvocationExpression) expression;
-      AExpressionFunction function = lookupFunction(evaluationEnvironment, interpretationEnvironment, functionExpression.getName());
+    if (expression instanceof final FunctionInvocationExpression functionExpression) {
+			AExpressionFunction function = lookupFunction(evaluationEnvironment, interpretationEnvironment, functionExpression.getName());
 
       // Function does not exist within the current environment
       if (function == null) {
@@ -220,9 +218,8 @@ public class Interpreter {
       Object result = function.apply(evaluationEnvironment, arguments);
 
       // Throw an exception based on the error description object, now that the expression ref is available
-      if (result instanceof FunctionInvocationError) {
-        FunctionInvocationError error = (FunctionInvocationError) result;
-        int index = error.getArgumentIndex();
+      if (result instanceof final FunctionInvocationError error) {
+				int index = error.getArgumentIndex();
         Object value = arguments.size() > index ? arguments.get(index) : null;
         throw new InvalidFunctionInvocationError(functionExpression, index, value, error.getMessage());
       }
@@ -231,10 +228,9 @@ public class Interpreter {
       return result;
     }
 
-    if (expression instanceof CallbackExpression) {
-      CallbackExpression callbackExpression = (CallbackExpression) expression;
+    if (expression instanceof final CallbackExpression callbackExpression) {
 
-      logger.log(Level.FINEST, () -> DebugLogSource.INTERPRETER + "Setting up the java endpoint for a callback expression");
+			logger.log(Level.FINEST, () -> DebugLogSource.INTERPRETER + "Setting up the java endpoint for a callback expression");
 
       // This lambda function will be called by java every time the callback is invoked
       return new AExpressionFunction() {
@@ -293,10 +289,9 @@ public class Interpreter {
 
     /////////////////////// Control Flow ////////////////////////
 
-    if (expression instanceof IfThenElseExpression) {
-      IfThenElseExpression ifExpression = (IfThenElseExpression) expression;
+    if (expression instanceof final IfThenElseExpression ifExpression) {
 
-      // Evaluate the if statement's condition expression
+			// Evaluate the if statement's condition expression
       Object condition = evaluateExpressionSub(ifExpression.getCondition(), evaluationEnvironment, interpretationEnvironment);
 
       // Interpret the result as a boolean and evaluate the body accordingly
@@ -308,10 +303,9 @@ public class Interpreter {
 
     /////////////////////// Member Access ////////////////////////
 
-    if (expression instanceof MemberAccessExpression) {
-      MemberAccessExpression memberExpression = (MemberAccessExpression) expression;
+    if (expression instanceof final MemberAccessExpression memberExpression) {
 
-      // Look up the container's value
+			// Look up the container's value
       Object value = evaluateExpressionSub(memberExpression.getLhs(), evaluationEnvironment, interpretationEnvironment);
       AExpression access = memberExpression.getRhs();
 
@@ -416,9 +410,8 @@ public class Interpreter {
         return result;
       }
 
-      if (expression instanceof NullCoalesceExpression) {
-        NullCoalesceExpression nullCoalesce = (NullCoalesceExpression) expression;
-        Object inputValue = evaluateExpressionSub(nullCoalesce.getLhs(), evaluationEnvironment, interpretationEnvironment);
+      if (expression instanceof final NullCoalesceExpression nullCoalesce) {
+				Object inputValue = evaluateExpressionSub(nullCoalesce.getLhs(), evaluationEnvironment, interpretationEnvironment);
 
         // Input value is non-null, return that
         if (inputValue != null)
@@ -430,62 +423,45 @@ public class Interpreter {
 
       if (expression instanceof EqualityExpression) {
         EqualityOperation operation = ((EqualityExpression) expression).getOperation();
-        boolean result;
+        boolean result              = switch (operation) {
+					case EQUAL -> valueInterpreter.areEqual(
+						lhs,
+						rhs,
+						false
+					);
+					case NOT_EQUAL -> ! valueInterpreter.areEqual(
+						lhs,
+						rhs,
+						false
+					);
+					case EQUAL_EXACT -> valueInterpreter.areEqual(
+						lhs,
+						rhs,
+						true
+					);
+					case NOT_EQUAL_EXACT -> ! valueInterpreter.areEqual(
+						lhs,
+						rhs,
+						true
+					);
+					default -> false;
+				};
 
-        switch (operation) {
-          case EQUAL:
-            result = valueInterpreter.areEqual(lhs, rhs, false);
-            break;
-
-          case NOT_EQUAL:
-            result = !valueInterpreter.areEqual(lhs, rhs, false);
-            break;
-
-          case EQUAL_EXACT:
-            result = valueInterpreter.areEqual(lhs, rhs, true);
-            break;
-
-          case NOT_EQUAL_EXACT:
-            result = !valueInterpreter.areEqual(lhs, rhs, true);
-            break;
-
-          default:
-            result = false;
-            break;
-        }
-
-        logger.log(Level.FINEST, () -> DebugLogSource.INTERPRETER + "Equality Operation operation " + operation + " result: " + result);
+				logger.log(Level.FINEST, () -> DebugLogSource.INTERPRETER + "Equality Operation operation " + operation + " result: " + result);
         return result;
       }
 
       if (expression instanceof ComparisonExpression) {
         ComparisonOperation operation = ((ComparisonExpression) expression).getOperation();
         int comparisonResult = valueInterpreter.compare(lhs, rhs);
-        boolean result;
+        boolean result       = switch (operation) {
+					case LESS_THAN -> comparisonResult < 0;
+					case GREATER_THAN -> comparisonResult > 0;
+					case LESS_THAN_OR_EQUAL -> comparisonResult <= 0;
+					case GREATER_THAN_OR_EQUAL -> comparisonResult >= 0;
+				};
 
-        switch (operation) {
-          case LESS_THAN:
-            result = comparisonResult < 0;
-            break;
-
-          case GREATER_THAN:
-            result = comparisonResult > 0;
-            break;
-
-          case LESS_THAN_OR_EQUAL:
-            result = comparisonResult <= 0;
-            break;
-
-          case GREATER_THAN_OR_EQUAL:
-            result = comparisonResult >= 0;
-            break;
-
-          default:
-            result = false;
-            break;
-        }
-
-        logger.log(Level.FINEST, () -> DebugLogSource.INTERPRETER + "Comparison Operation operation " + operation + " result: " + result);
+				logger.log(Level.FINEST, () -> DebugLogSource.INTERPRETER + "Comparison Operation operation " + operation + " result: " + result);
         return result;
       }
 
@@ -507,12 +483,10 @@ public class Interpreter {
         return result;
       }
 
-      if (expression instanceof IndexExpression) {
-        IndexExpression indexExpression = (IndexExpression) expression;
+      if (expression instanceof final IndexExpression indexExpression) {
 
-        if (lhs instanceof List) {
-          List<?> list = (List<?>) lhs;
-          int key = (int) valueInterpreter.asLong(rhs);
+				if (lhs instanceof final List<?> list) {
+					int key = (int) valueInterpreter.asLong(rhs);
           int listLength = list.size();
 
           // Not a valid list index
@@ -553,9 +527,8 @@ public class Interpreter {
           return result;
         }
 
-        if (lhs instanceof Map) {
-          Map<?, ?> map = (Map<?, ?>) lhs;
-          String key = valueInterpreter.asString(rhs);
+        if (lhs instanceof final Map<?, ?> map) {
+					String key = valueInterpreter.asString(rhs);
 
           // Not a valid map member
           if (!map.containsKey(key)) {

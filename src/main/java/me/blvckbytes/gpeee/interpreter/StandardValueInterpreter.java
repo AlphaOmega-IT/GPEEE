@@ -25,6 +25,9 @@
 package me.blvckbytes.gpeee.interpreter;
 
 import me.blvckbytes.gpeee.parser.MathOperation;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.Array;
@@ -63,11 +66,11 @@ public class StandardValueInterpreter implements IValueInterpreter {
 
     // A collection will be zero if empty and one otherwise
     if (value instanceof Collection)
-      return ((Collection<?>) value).size() == 0 ? 0 : 1;
+      return ((Collection<?>) value).isEmpty() ? 0 : 1;
 
     // A map will be zero if empty and one otherwise
     if (value instanceof Map)
-      return ((Map<?, ?>) value).size() == 0 ? 0 : 1;
+      return ((Map<?, ?>) value).isEmpty() ? 0 : 1;
 
     // An array will be zero if empty and one otherwise
     if (value.getClass().isArray())
@@ -96,7 +99,7 @@ public class StandardValueInterpreter implements IValueInterpreter {
     if (value instanceof Double)
       return ((Double) value);
 
-    // Is any other number, get it's value as a double
+    // Is any other number, get its value as a double
     if (value instanceof Number)
       return ((Number) value).doubleValue();
 
@@ -113,15 +116,13 @@ public class StandardValueInterpreter implements IValueInterpreter {
       return ((String) value);
 
     // Transform a map to a list of it's entries
-    if (value instanceof Map) {
-      Map<?, ?> map = (Map<?, ?>) value;
-      return asString(new ArrayList<>(map.entrySet()));
+    if (value instanceof final Map<?, ?> map) {
+			return asString(new ArrayList<>(map.entrySet()));
     }
 
     // Stringify map entries
-    if (value instanceof Map.Entry) {
-      Map.Entry<?, ?> entry = (Map.Entry<?, ?>) value;
-      return "(" + asString(entry.getKey()) + " -> " + asString(entry.getValue()) + ")";
+    if (value instanceof final Map.Entry<?, ?> entry) {
+			return "(" + asString(entry.getKey()) + " -> " + asString(entry.getValue()) + ")";
     }
 
     if (value instanceof Collection<?> || value.getClass().isArray()) {
@@ -146,7 +147,21 @@ public class StandardValueInterpreter implements IValueInterpreter {
     return value.toString();
   }
 
-  @Override
+	@Override
+	public Component asTextComponent(
+		@Nullable
+		final Object value
+	) {
+		if (value == null)
+			return MiniMessage.miniMessage().deserialize("<red><null></red>");
+
+		if (value instanceof Component component)
+			return component;
+
+		return MiniMessage.miniMessage().deserialize(value.toString());
+	}
+
+	@Override
   public List<Object> asCollection(@Nullable Object value) {
     // Collections are just wrapped in arraylists
     if (value instanceof Collection<?>)
@@ -185,10 +200,9 @@ public class StandardValueInterpreter implements IValueInterpreter {
       return false;
 
     // Both values are of type string, specific rules apply
-    if (a instanceof String && b instanceof String) {
-      String sA = (String) a, sB = (String) b;
+    if (a instanceof final String sA && b instanceof final String sB) {
 
-      // In non-strict mode, they are compared ignoring case and whitespace padding
+			// In non-strict mode, they are compared ignoring case and whitespace padding
       return strict ? sA.equals(sB) : sA.trim().equalsIgnoreCase(sB.trim());
     }
 
@@ -224,10 +238,9 @@ public class StandardValueInterpreter implements IValueInterpreter {
       return false;
 
     // Both values are a collection, compare their type and contents
-    if (a instanceof Collection && b instanceof Collection) {
-      Collection<?> cA = (Collection<?>) a, cB = (Collection<?>) b;
+    if (a instanceof final Collection<?> cA && b instanceof final Collection<?> cB) {
 
-      // Cannot equal as they have a different number of items
+			// Cannot equal as they have a different number of items
       if (cA.size() != cB.size())
         return false;
 
@@ -235,10 +248,9 @@ public class StandardValueInterpreter implements IValueInterpreter {
     }
 
     // Both values are a map, compare their type and entry sets
-    if (a instanceof Map && b instanceof Map) {
-      Map<?, ?> mA = (Map<?, ?>) a, mB = (Map<?, ?>) b;
+    if (a instanceof final Map<?, ?> mA && b instanceof final Map<?, ?> mB) {
 
-      // Cannot equal as they have a different number of items
+			// Cannot equal as they have a different number of items
       if (mA.size() != mB.size())
         return false;
 
@@ -269,7 +281,7 @@ public class StandardValueInterpreter implements IValueInterpreter {
       return doIterablesContainSameItems(wrapArrayInIterable(a), wrapArrayInIterable(b), strict, (vA, vB) -> areEqual(vA, vB, strict));
     }
 
-    // Fallback: Compare as integers (in non-strict mode now anyways)
+    // Fallback: Compare as integers (in non-strict mode now anyway)
     return compare(a, b) == 0;
   }
 

@@ -92,7 +92,7 @@ public class Parser {
     }
 
     // Completely empty expression, should've at least parsed one line
-    if (lines.size() == 0)
+    if (lines.isEmpty())
       throw new UnexpectedTokenError(tokenizer, null, TokenType.valuesInTrialOrder);
 
     return new ProgramExpression(
@@ -173,7 +173,7 @@ public class Parser {
     while ((tk = tokenizer.peekToken()) != null && tk.getType() != TokenType.PARENTHESIS_CLOSE) {
       logger.log(Level.FINEST, () -> DebugLogSource.PARSER + "Parsing argument " + signature.size());
 
-      if (signature.size() > 0) {
+      if (! signature.isEmpty()) {
         // Arguments other than the first one need to be separated out by a comma
         // If there's no comma, this cannot be a callback expression and is more likely a parenthesis expression
         if (tk.getType() != TokenType.COMMA) {
