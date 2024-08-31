@@ -42,7 +42,7 @@ public interface IValueInterpreter {
 
   String asString(@Nullable Object value);
 
-	Component asTextComponent(@Nullable Object value);
+  Component asTextComponent(@Nullable Object value);
 
   List<Object> asCollection(@Nullable Object value);
 
